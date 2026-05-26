@@ -42,18 +42,27 @@ class TestConfigKeyValidation(unittest.TestCase):
 
     def test_multiple_consecutive_dots_rejected(self):
         """Key with multiple consecutive dots should raise ValueError."""
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as ctx:
             self.config.get("a...b")
+        self.assertIn("empty segment", str(ctx.exception).lower())
 
-    def test_valid_key_works(self):
-        """Valid dotted key should work normally."""
-        self.config.set("foo.bar", "value")
-        self.assertEqual(self.config.get("foo.bar"), "value")
+    def test_whitespace_in_segment_rejected(self):
+        """Key with whitespace in segment should raise ValueError."""
+        with self.assertRaises(ValueError) as ctx:
+            self.config.get("foo .bar")
+        self.assertIn("whitespace", str(ctx.exception).lower())
 
-    def test_valid_single_key_works(self):
-        """Single-segment key should work."""
-        self.config.set("key", "value")
-        self.assertEqual(self.config.get("key"), "value")
+    def test_leading_whitespace_rejected(self):
+        """Key with leading whitespace in segment should raise ValueError."""
+        with self.assertRaises(ValueError) as ctx:
+            self.config.get(" foo.bar")
+        self.assertIn("whitespace", str(ctx.exception).lower())
+
+    def test_trailing_whitespace_rejected(self):
+        """Key with trailing whitespace in segment should raise ValueError."""
+        with self.assertRaises(ValueError) as ctx:
+            self.config.get("foo.bar ")
+        self.assertIn("whitespace", str(ctx.exception).lower())
 
     def test_set_empty_key_rejected(self):
         """set() with empty key should raise ValueError."""
@@ -63,14 +72,33 @@ class TestConfigKeyValidation(unittest.TestCase):
     def test_set_consecutive_dots_rejected(self):
         """set() with consecutive dots should raise ValueError."""
         with self.assertRaises(ValueError):
-            self.config.set("a..b", "value")
+            self.config.set("foo..bar", "value")
 
-    def test_error_message_includes_key(self):
-        """Error message should include the problematic key."""
-        with self.assertRaises(ValueError) as ctx:
-            self.config.get("foo..bar")
-        self.assertIn("foo..bar", str(ctx.exception))
+    def test_set_whitespace_rejected(self):
+        """set() with whitespace should raise ValueError."""
+        with self.assertRaises(ValueError):
+            self.config.set("foo .bar", "value")
+
+    def test_valid_key_works(self):
+        """Valid key should work normally."""
+        self.config.set("foo.bar", "value")
+        self.assertEqual(self.config.get("foo.bar"), "value")
+
+    def test_valid_single_key_works(self):
+        """Valid single-level key should work."""
+        self.config.set("foo", "value")
+        self.assertEqual(self.config.get("foo"), "value")
+
+    def test_valid_deep_key_works(self):
+        """Valid deeply nested key should work."""
+        self.config.set("a.b.c.d", "value")
+        self.assertEqual(self.config.get("a.b.c.d"), "value")
+
+    def test_default_returned_for_missing(self):
+        """Default value should be returned for missing key."""
+        result = self.config.get("missing.key", "default")
+        self.assertEqual(result, "default")
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
