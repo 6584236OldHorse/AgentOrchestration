@@ -24,7 +24,7 @@ class Config:
                 self._set_nested(config_key, value)
 
     def _validate_key(self, key: str) -> None:
-        """Validate that a dotted config key does not contain empty segments."""
+        """Validate that a dotted config key does not contain empty segments or whitespace."""
         if not key:
             raise ValueError("Config key must not be empty")
         parts = key.split(".")
@@ -32,6 +32,10 @@ class Config:
             if not part:
                 raise ValueError(
                     f"Config key '{key}' contains empty segment at position {i}"
+                )
+            if part.strip() != part:
+                raise ValueError(
+                    f"Config key '{key}' contains whitespace in segment at position {i}"
                 )
 
     def _set_nested(self, key: str, value: Any) -> None:
@@ -49,12 +53,9 @@ class Config:
         parts = key.split(".")
         current = self._data
         for part in parts:
-            if isinstance(current, dict):
-                current = current.get(part)
-                if current is None:
-                    return default
-            else:
+            if not isinstance(current, dict) or part not in current:
                 return default
+            current = current[part]
         return current
 
     def set(self, key: str, value: Any) -> None:
